@@ -32,7 +32,7 @@ client.connect()
   })
   .catch(err => console.error('MongoDB connection error:',err));
 
-//Save a single bin category reading sent from the device into MongoDB
+ //Save a single bin category reading sent from the device into MongoDB
 app.post('/readings', async(req,res) => {
   try{
     const doc = req.body || {};
@@ -54,11 +54,42 @@ app.post('/readings', async(req,res) => {
 
   }catch (err)  {
     console.error('POST /readings error', err);
-    
+
     res.status(500).json({ error: 'Failed to save reading'});
     }
   });
-  
+
+//Give the dashboard the current level with the newest level of each bin type
+app.get('/readings/latest', async(req, res) => {
+  try {
+    // aggregate latest doc per category
+    const agg = await db.collection('readings').aggregate([
+      { $sort: { date: -1 } },
+      { $group: { _id: "$category", latest: { $first: "$$ROOT" } } }
+    ]).toArray();
+
+    const categories = ['paper', 'plastic', 'metal', 'general'];
+    const levels = { paper: 0, plastic: 0, metal: 0, general: 0 };
+    const isFull = { paper: false, plastic: false, metal: false, general: false };
+    let latestDate = null;
+
+    agg.forEach(g => {
+      const cat = (g._id || '').toString().toLowerCase();
+      if (categories.includes(cat) && g.latest) {
+        levels[cat] = Number(g.latest.level || 0);
+        isFull[cat] = Boolean(g.latest.isCategoryFull || false);
+        const d = new Date(g.latest.date);
+        if (!latestDate || d > latestDate) latestDate = d;
+      }
+    });
+
+    res.json({ date: latestDate || new Date(), levels, isFull });
+  } catch (err) {
+    console.error('GET /readings/latest error', err);
+    res.status(500).json({ error: 'Failed to fetch latest snapshot' });
+  }
+});
+
 app.get('/', (req, res) => {
   res.send('Trash Monitoring API running');
 });
