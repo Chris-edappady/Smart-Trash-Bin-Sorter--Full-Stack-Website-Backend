@@ -31,6 +31,33 @@ client.connect()
     console.log('Connected to Mongodb');
   })
   .catch(err => console.error('MongoDB connection error:',err));
+
+//Save a single bin category reading sent from the device into MongoDB
+app.post('/readings', async(req,res) => {
+  try{
+    const doc = req.body || {};
+
+    //Validation check to not save empty data
+    if (!doc.deviceId || !doc.category || typeof doc.level === 'undefined') {
+      return res.status(400).json({ error: 'Invalid reading. Required deviceId, category, level'});
+    }
+
+    //Uses current date
+    if (doc.date) {
+      const d = new Date(doc.date);
+      doc.date = isNan(d.getTime()) ? newDate() : d;
+    } else  {
+      doc.date = new Date();
+    }
+    await db.collection('readings').insertOne(doc);
+    res.status(201).json({  success: true });
+
+  }catch (err)  {
+    console.error('POST /readings error', err);
+    
+    res.status(500).json({ error: 'Failed to save reading'});
+    }
+  });
   
 app.get('/', (req, res) => {
   res.send('Trash Monitoring API running');
