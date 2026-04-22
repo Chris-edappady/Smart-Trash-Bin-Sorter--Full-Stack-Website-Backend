@@ -107,6 +107,35 @@ app.get('/readings/history', async (req, res) => {
   }
 });
 
+//Returns total counts for each category from history
+app.get('/readings/counts', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ error: 'Database not connected' });
+    }
+
+    const rows = await db.collection('readings').aggregate([
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1}
+        }
+      }
+    ]).toArray();
+
+    const counts = { paper: 0, plastic: 0, metal: 0, general: 0 };
+
+    rows.forEach(r => {
+      counts[r._id] = r.count;
+    });
+
+    res.json(counts);
+  } catch (err) {
+    console.error('GET /readings/counts error', err);
+    res.status(500).json({ error: 'Failed to fetch counts' });
+  }
+});
+
 app.get('/', (req, res) => {
   res.send('Trash Monitoring API running');
 });
