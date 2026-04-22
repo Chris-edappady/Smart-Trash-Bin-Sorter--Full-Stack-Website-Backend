@@ -45,7 +45,7 @@ app.post('/readings', async(req,res) => {
     //Uses current date
     if (doc.date) {
       const d = new Date(doc.date);
-      doc.date = isNan(d.getTime()) ? newDate() : d;
+      doc.date = isNaN(d.getTime()) ? new Date() : d;
     } else  {
       doc.date = new Date();
     }
@@ -89,6 +89,23 @@ app.get('/readings/latest', async(req, res) => {
     res.status(500).json({ error: 'Failed to fetch latest snapshot' });
   }
 });
+
+//Returns history records sorted oldest to newest
+app.get('/readings/history', async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(10000, Number(req.query.limit) || 200));
+    const data = await db.collection('readings')
+      .find({})
+      .sort({ date: 1 })
+      .limit(limit)
+      .toArray();
+
+    res.json(data);
+  } catch (err) {
+    console.error('GET /readings/history error', err);
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});  
 
 app.get('/', (req, res) => {
   res.send('Trash Monitoring API running');
