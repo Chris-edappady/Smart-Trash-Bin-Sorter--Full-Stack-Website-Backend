@@ -8,7 +8,7 @@ app.use(express.json());
 
 //Request logger : logs date and time 
 app.use((req, res, next) => {
-  console.log(`[${new Date().toLocaleDateString()}] ${req.method} ${req.url}`);
+  console.log(`[${new Date().toLocaleString()}] ${req.method} ${req.url}`);
   next();
 })
 
@@ -83,7 +83,11 @@ app.get('/readings/latest', async(req, res) => {
       }
     });
 
-    res.json({ date: latestDate || new Date(), levels, isFull });
+    res.json({ 
+      date: latestDate || new Date(), 
+      levels, 
+      isFull 
+    });
   } catch (err) {
     console.error('GET /readings/latest error', err);
     res.status(500).json({ error: 'Failed to fetch latest snapshot' });
