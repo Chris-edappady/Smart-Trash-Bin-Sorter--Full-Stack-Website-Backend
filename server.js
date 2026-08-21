@@ -49,7 +49,23 @@ app.post('/readings', async(req,res) => {
     } else  {
       doc.date = new Date();
     }
-    await db.collection('readings').insertOne(doc);
+    //Collection for previous readings
+    await db.collection('readings_history').insertOne(doc);
+
+    //Collection for current readings
+    await db.collection('readings_current').updateOne(
+      { category: doc.category },
+      {
+        $set : {
+          category: doc.category,
+          level: doc.level,
+          isCategoryFull: doc.isCategoryFull,
+          date: doc.date
+        }
+      },
+      { upsert: true }
+    );
+
     res.status(201).json({  success: true });
 
   }catch (err)  {
